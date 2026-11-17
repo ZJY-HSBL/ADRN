@@ -26,3 +26,11 @@ class Tests(unittest.TestCase):
     def test_threshold(self):
         y=np.array([0,0,1,1]);p=np.array([.1,.2,.8,.9]);self.assertEqual(threshold_f2(y,p),.8)
 if __name__=='__main__':unittest.main()
+
+class StatisticsTests(unittest.TestCase):
+    def test_bh_adjustment(self):
+        from adrn.statistics import bh
+        np.testing.assert_allclose(bh([.01,.04,.03,.002]),[.02,.04,.04,.008])
+    def test_welch_validates(self):
+        from adrn.statistics import welch
+        with self.assertRaises(ValueError):welch([1],[2,3])

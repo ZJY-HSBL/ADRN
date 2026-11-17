@@ -8,7 +8,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.model_selection import train_test_split
 
-def load(name,root='data/raw',split_seed=42):
+def load(name,root='data/raw',split_seed=42,target_ir=None,ir_seed=0):
     root=Path(root)
     if name=='gmsc':
         df=pd.read_csv(root/'cs-training.csv'); y=df.pop('SeriousDlqin2yrs').astype(int).to_numpy();df=df.loc[:,~df.columns.str.startswith('Unnamed')]
@@ -19,6 +19,12 @@ def load(name,root='data/raw',split_seed=42):
         for c in ('SEX','EDUCATION','MARRIAGE'):df[c]=df[c].astype(str)
     else: raise ValueError('unknown dataset')
     indices=np.arange(len(y)); tr, rest=train_test_split(indices,test_size=.2,stratify=y,random_state=split_seed);va,te=train_test_split(rest,test_size=.5,stratify=y[rest],random_state=split_seed)
+    if target_ir is not None:
+        if target_ir <= 0: raise ValueError('target_ir must be positive')
+        negative=tr[y[tr]==0];positive=tr[y[tr]==1];target=int(len(negative)//target_ir)
+        if target<1 or target>len(positive): raise ValueError('target ratio cannot be achieved by minority undersampling')
+        selected=np.random.default_rng(ir_seed).choice(positive,size=target,replace=False)
+        tr=np.concatenate([negative,selected])
     cat=df.select_dtypes(include=['object','category']).columns.tolist();num=[c for c in df.columns if c not in cat]
     numeric=Pipeline([('fill',SimpleImputer(strategy='median')),('scale',StandardScaler())])
     categorical=Pipeline([('fill',SimpleImputer(strategy='most_frequent')),('onehot',OneHotEncoder(handle_unknown='ignore',sparse_output=False))])

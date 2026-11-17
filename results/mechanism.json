@@ -1,0 +1,29 @@
+{
+  "gmsc": {
+    "test_count": 15000,
+    "positive_count": 1003,
+    "positive_deficit_count": 14095,
+    "positive_class_deficit_count": 607,
+    "mean_overlap": 0.8113164901733398,
+    "mean_gate": 0.18868353962898254,
+    "mean_correction": 0.01623190939426422
+  },
+  "bank": {
+    "test_count": 4522,
+    "positive_count": 529,
+    "positive_deficit_count": 4341,
+    "positive_class_deficit_count": 422,
+    "mean_overlap": 0.41093695163726807,
+    "mean_gate": 0.5890630483627319,
+    "mean_correction": 0.12745143473148346
+  },
+  "default": {
+    "test_count": 3000,
+    "positive_count": 663,
+    "positive_deficit_count": 2494,
+    "positive_class_deficit_count": 381,
+    "mean_overlap": 0.5866535902023315,
+    "mean_gate": 0.41334643959999084,
+    "mean_correction": 0.09383907169103622
+  }
+}

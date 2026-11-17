@@ -6,3 +6,6 @@ matplotlib>=3.7
 torch>=2.2
 openpyxl>=3.1
 xlrd>=2.0
+optuna>=3.5
+xgboost>=2.0
+imbalanced-learn>=0.12
