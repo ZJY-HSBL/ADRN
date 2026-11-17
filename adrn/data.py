@@ -30,4 +30,4 @@ def load(name,root='data/raw',split_seed=42,target_ir=None,ir_seed=0):
     categorical=Pipeline([('fill',SimpleImputer(strategy='most_frequent')),('onehot',OneHotEncoder(handle_unknown='ignore',sparse_output=False))])
     transformer=ColumnTransformer([('num',numeric,num),('cat',categorical,cat)])
     a=transformer.fit_transform(df.iloc[tr]).astype('float32');b=transformer.transform(df.iloc[va]).astype('float32');c=transformer.transform(df.iloc[te]).astype('float32')
-    return (a,y[tr]),(b,y[va]),(c,y[te]),{'rows':len(y),'train':len(tr),'validation':len(va),'test':len(te),'input_features':df.shape[1],'encoded_features':a.shape[1],'split_seed':split_seed,'positive':int(y.sum())}
+    return (a,y[tr]),(b,y[va]),(c,y[te]),{'rows':len(y),'train':len(tr),'validation':len(va),'test':len(te),'input_features':df.shape[1],'numeric_features':len(num),'encoded_features':a.shape[1],'split_seed':split_seed,'positive':int(y.sum())}
