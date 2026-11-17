@@ -9,3 +9,5 @@ xlrd>=2.0
 optuna>=3.5
 xgboost>=2.0
 imbalanced-learn>=0.12
+
+faiss-cpu>=1.8
