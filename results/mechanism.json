@@ -2,28 +2,28 @@
   "gmsc": {
     "test_count": 15000,
     "positive_count": 1003,
-    "positive_deficit_count": 14095,
-    "positive_class_deficit_count": 607,
-    "mean_overlap": 0.8113164901733398,
-    "mean_gate": 0.18868353962898254,
-    "mean_correction": 0.01623190939426422
+    "positive_deficit_count": 14147,
+    "positive_class_deficit_count": 624,
+    "mean_overlap": 0.8587303161621094,
+    "mean_gate": 0.14126969873905182,
+    "mean_correction": 0.01593894138932228
   },
   "bank": {
     "test_count": 4522,
     "positive_count": 529,
-    "positive_deficit_count": 4341,
-    "positive_class_deficit_count": 422,
-    "mean_overlap": 0.41093695163726807,
-    "mean_gate": 0.5890630483627319,
-    "mean_correction": 0.12745143473148346
+    "positive_deficit_count": 4310,
+    "positive_class_deficit_count": 407,
+    "mean_overlap": 0.4058663547039032,
+    "mean_gate": 0.5941336750984192,
+    "mean_correction": 0.1334427148103714
   },
   "default": {
     "test_count": 3000,
     "positive_count": 663,
-    "positive_deficit_count": 2494,
-    "positive_class_deficit_count": 381,
-    "mean_overlap": 0.5866535902023315,
-    "mean_gate": 0.41334643959999084,
-    "mean_correction": 0.09383907169103622
+    "positive_deficit_count": 2389,
+    "positive_class_deficit_count": 366,
+    "mean_overlap": 0.5961312651634216,
+    "mean_gate": 0.40386873483657837,
+    "mean_correction": 0.08138611167669296
   }
 }

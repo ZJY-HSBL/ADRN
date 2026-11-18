@@ -4,6 +4,12 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+def structural_probability(log_support):
+    """Equation (11), preserving +1e-12 in the denominator in log space."""
+    log_sum=torch.logsumexp(log_support,dim=1)
+    log_den=torch.logaddexp(log_sum,torch.full_like(log_sum,math.log(1e-12)))
+    return torch.exp(log_support[:,1]-log_den)
+
 class ADRN(nn.Module):
     def __init__(self,input_dim,hidden=64,latent=16,k=4,variant='full'):
         super().__init__()
@@ -33,10 +39,9 @@ class ADRN(nn.Module):
         within=torch.stack([bc[0,:,0,:].masked_fill(eye,0).max(-1).values,bc[1,:,1,:].masked_fill(eye,0).max(-1).values])
         reliability=((1-cross).clamp(0,1)*(1-within).clamp(0,1)).clamp_min(1e-6)
         if self.variant=='no_reliability': reliability=torch.ones_like(reliability)
-        # Logsumexp is algebraically identical to normalized weighted affinity,
-        # but avoids underflow for distant points.
+        # The denominator includes the paper's 1e-12 stabilizer, in log space.
         log_support=torch.logsumexp(logpi[None,:,:]+affinity+reliability.log()[None,:,:],dim=2)
-        p_struct=torch.softmax(log_support,dim=1)[:,1]
+        p_struct=structural_probability(log_support)
         difference=p_struct-p_obs
         deficit=difference if self.variant=='signed_deficit' else F.relu(difference)
         responsibilities=torch.softmax(logpi[None,:,:]+affinity,dim=2)

@@ -12,6 +12,13 @@ class Tests(unittest.TestCase):
         self.assertTrue((out['probability']<=torch.maximum(out['observed'],out['structure'])+1e-6).all())
         loss=torch.nn.functional.binary_cross_entropy(out['probability'],torch.rand(9));loss.backward()
         self.assertTrue(all(p.grad is not None and torch.isfinite(p.grad).all() for p in model.parameters()))
+    def test_structural_probability_matches_equation(self):
+        from adrn.model import structural_probability
+        supports=torch.tensor([[2e-12,1e-12],[1e-8,2e-8],[1e-40,1e-40]],dtype=torch.float64)
+        actual=structural_probability(supports.log())
+        expected=supports[:,1]/(supports.sum(1)+1e-12)
+        torch.testing.assert_close(actual,expected,rtol=1e-12,atol=1e-30)
+        self.assertLess(actual[-1],1e-20)
     def test_overlap(self):
         model=ADRN(3,4,2,2);bc=model.overlap().reshape(4,4)
         self.assertTrue(torch.allclose(bc,bc.T));self.assertTrue(torch.allclose(torch.diagonal(bc),torch.ones(4)))

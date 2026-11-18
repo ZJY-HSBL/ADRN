@@ -15,15 +15,17 @@
 
 训练执行编码器监督预训练、按真实类别 KMeans 初始化基元、端到端联合优化；验证集 PR-AUC（Average Precision）选择检查点，并在验证集最大化 F2 确定阈值，再在独立测试集上评估。预处理仅在训练集拟合，`duration`、`ID` 和标签均不作为输入。
 
+本次审计修正了结构概率公式分母中的 `1e-12`，并重新运行受影响实验；核对方法及旧版差异见 [复现审计](docs/reproduction_audit.md)。
+
 ## 实际实验结果
 
 下表是本仓库运行得到的独立测试集结果，固定一次 8:1:1 分层划分，种子 0–4 独立初始化，报告均值 ± 样本标准差；PR-AUC 按 Average Precision 计算。
 
 | 数据集 | Precision | Recall | F1 | F2 | ROC-AUC | PR-AUC |
 |---|---:|---:|---:|---:|---:|---:|
-| GMSC | 0.2708 ± 0.0220 | 0.6273 ± 0.0262 | 0.3773 ± 0.0159 | 0.4952 ± 0.0021 | 0.8337 ± 0.0012 | 0.3665 ± 0.0053 |
-| Bank | 0.3247 ± 0.0579 | 0.6355 ± 0.0572 | 0.4244 ± 0.0387 | 0.5268 ± 0.0127 | 0.7925 ± 0.0037 | 0.4481 ± 0.0115 |
-| Default | 0.3079 ± 0.0092 | 0.8015 ± 0.0302 | 0.4446 ± 0.0087 | 0.6065 ± 0.0121 | 0.7505 ± 0.0078 | 0.5243 ± 0.0062 |
+| GMSC | 0.2711 ± 0.0122 | 0.6203 ± 0.0186 | 0.3769 ± 0.0083 | 0.4927 ± 0.0034 | 0.8333 ± 0.0018 | 0.3636 ± 0.0025 |
+| BANK | 0.3273 ± 0.0475 | 0.6401 ± 0.0550 | 0.4290 ± 0.0311 | 0.5322 ± 0.0092 | 0.7943 ± 0.0022 | 0.4522 ± 0.0101 |
+| DEFAULT | 0.3046 ± 0.0209 | 0.8042 ± 0.0493 | 0.4408 ± 0.0164 | 0.6038 ± 0.0132 | 0.7523 ± 0.0079 | 0.5251 ± 0.0057 |
 
 ![三组数据集测试结果](figures/test_metrics.png)
 
@@ -33,15 +35,28 @@
 ![Bank 实验图](figures/bank_evaluation.png)
 ![Default 实验图](figures/default_evaluation.png)
 
+## Default 类别编码对照
+
+论文列出 29 维，但未明确说明类别合并方式。主实验保留原始类别并得到 33 维；作为单独假设，将 `EDUCATION` 的 0、5、6 合并到 4，`MARRIAGE` 的 0 合并到 3，得到 29 维。两组共享划分和训练配置，以下都是实际运行的五次均值 ± 样本标准差。该映射没有得到作者确认，不能据此认定与论文预处理一致，也不依据测试集结果选择编码。
+
+| 编码 | F1 | F2 | PR-AUC |
+|---|---:|---:|---:|
+| 原始类别，33 维 | 0.4408 ± 0.0164 | 0.6038 ± 0.0132 | 0.5251 ± 0.0057 |
+| 合并类别，29 维 | 0.4467 ± 0.0120 | 0.6134 ± 0.0110 | 0.5194 ± 0.0074 |
+
+![Default 编码对照](figures/default_encoding_comparison.png)
+
+完整配置与每次结果见 `results/default_grouped_encoding.json`。
+
 ## TPE 搜索与横向基线
 
-每个数据集进行 5 次候选搜索（前 2 次为 TPE 启动采样），搜索空间为隐层 `{32,64}`、潜在维数 `{8,16}`、每类基元数 `{4,8}`、学习率 `[0.0005,0.002]`（对数采样）和采样指数 β `[0.25,0.75]`。只按验证集 AP 选配置，再对固定配置执行五次独立初始化并在测试集评估；搜索过程及各次结果存于 `results/*_tpe.json`。这是便于复现的小规模搜索，不能视为原文未公开搜索范围的等价实现。
+每个数据集进行 12 次候选搜索（前 2 次为 TPE 启动采样），搜索空间为隐层 `{32,64}`、潜在维数 `{8,16}`、每类基元数 `{4,8}`、学习率 `[0.0005,0.002]`（对数采样）和采样指数 β `[0.25,0.75]`。只按验证集 AP 选配置，再对固定配置执行五次独立初始化并在测试集评估；搜索过程及各次结果存于 `results/*_tpe.json`。这是便于复现的小规模搜索，不能视为原文未公开搜索范围的等价实现。
 
 | 数据集 | TPE 后 F1 | TPE 后 F2 | TPE 后 PR-AUC |
 |---|---:|---:|---:|
-| GMSC | 0.3673 ± 0.0128 | 0.4941 ± 0.0035 | 0.3690 ± 0.0030 |
-| Bank | 0.4193 ± 0.0310 | 0.5332 ± 0.0148 | 0.4572 ± 0.0111 |
-| Default | 0.4497 ± 0.0105 | 0.6074 ± 0.0064 | 0.5220 ± 0.0164 |
+| GMSC | 0.3701 ± 0.0085 | 0.4921 ± 0.0031 | 0.3682 ± 0.0031 |
+| BANK | 0.4246 ± 0.0165 | 0.5311 ± 0.0075 | 0.4465 ± 0.0111 |
+| DEFAULT | 0.4434 ± 0.0204 | 0.6125 ± 0.0100 | 0.5172 ± 0.0236 |
 
 另以相同划分、验证集 F2 阈值和五次运行比较下列基线；这是自行指定配置的独立实现，无法保证与论文基线配置完全相同。MLP 和 Focal MLP 的隐藏层为 64/16、均使用 β=0.5 抽样，Focal 设置 α=0.25、γ=2；XGBoost 为 150 棵树、最大深度 4；SMOTE 仅用于训练集，但对独热编码列也做插值，可能产生非整数的类别表示。
 
@@ -85,7 +100,9 @@
 
 ![NDU 分段删除率](figures/ndu_segment_rates.png)
 
-具体实验参数、每次结果与分段删除率见 `results/*_ndu_approx.json`；执行 `python -m experiments.ndu_xgboost` 后可重新生成结果，`python -m experiments.plot_ndu` 重绘图形。
+具体实验参数、每次结果与分段删除率见 `results/*_ndu_approx.json`；执行 `python -m experiments.ndu_xgboost` 后可重新生成结果，`python -m experiments.encoding_study
+python -m experiments.plot_encoding
+python -m experiments.plot_ndu` 重绘图形。
 
 本次 XGBoost 在三组数据的 F1、F2、PR-AUC 上均高于本次固定配置的 ADRN；因此本次结果不支持 ADRN 在这些条件下全面优于该基线。图中同时保留固定配置和 TPE 配置，TPE 配置并未根据测试集结果选择。
 
@@ -108,9 +125,9 @@
 
 | 数据集 | 测试正类数 | 正类中存在正缺口的样本 | 平均门控值 | 平均概率补偿 |
 |---|---:|---:|---:|---:|
-| GMSC | 1003 | 607 | 0.1887 | 0.0162 |
-| Bank | 529 | 422 | 0.5891 | 0.1275 |
-| Default | 663 | 381 | 0.4133 | 0.0938 |
+| GMSC | 1003 | 624 | 0.1413 | 0.0159 |
+| BANK | 529 | 407 | 0.5941 | 0.1334 |
+| DEFAULT | 663 | 366 | 0.4039 | 0.0814 |
 
 ![GMSC 机制分析](figures/gmsc_mechanism.png)
 ![Bank 机制分析](figures/bank_mechanism.png)
@@ -124,20 +141,20 @@
 
 | 数据集 | 方案 | F1 | F2 | PR-AUC |
 |---|---|---:|---:|---:|
-| GMSC | 完整模型 | 0.3773 ± 0.0159 | 0.4952 ± 0.0021 | 0.3665 ± 0.0053 |
-| GMSC | w/o Reliability | 0.3754 ± 0.0101 | 0.4934 ± 0.0040 | 0.3641 ± 0.0019 |
-| GMSC | w/o Deficit | 0.3681 ± 0.0124 | 0.4915 ± 0.0018 | 0.3623 ± 0.0079 |
-| GMSC | w/o Gate | 0.3691 ± 0.0112 | 0.4937 ± 0.0019 | 0.3638 ± 0.0016 |
-| GMSC | w/o Latent | 0.3666 ± 0.0105 | 0.4778 ± 0.0052 | 0.3489 ± 0.0051 |
-| BANK | 完整模型 | 0.4244 ± 0.0387 | 0.5268 ± 0.0127 | 0.4481 ± 0.0115 |
-| BANK | w/o Reliability | 0.4300 ± 0.0344 | 0.5274 ± 0.0100 | 0.4426 ± 0.0103 |
-| BANK | w/o Deficit | 0.4347 ± 0.0258 | 0.5341 ± 0.0088 | 0.4492 ± 0.0080 |
-| BANK | w/o Gate | 0.4285 ± 0.0310 | 0.5330 ± 0.0062 | 0.4481 ± 0.0088 |
-| BANK | w/o Latent | 0.3889 ± 0.0323 | 0.4916 ± 0.0172 | 0.3473 ± 0.0241 |
-| DEFAULT | 完整模型 | 0.4446 ± 0.0087 | 0.6065 ± 0.0121 | 0.5243 ± 0.0062 |
-| DEFAULT | w/o Reliability | 0.4468 ± 0.0132 | 0.6148 ± 0.0052 | 0.5280 ± 0.0045 |
-| DEFAULT | w/o Deficit | 0.4480 ± 0.0145 | 0.6090 ± 0.0115 | 0.5275 ± 0.0038 |
-| DEFAULT | w/o Gate | 0.4479 ± 0.0096 | 0.6083 ± 0.0061 | 0.5241 ± 0.0055 |
+| GMSC | 完整模型 | 0.3769 ± 0.0083 | 0.4927 ± 0.0034 | 0.3636 ± 0.0025 |
+| GMSC | w/o Reliability | 0.3711 ± 0.0077 | 0.4955 ± 0.0022 | 0.3663 ± 0.0041 |
+| GMSC | w/o Deficit | 0.3683 ± 0.0102 | 0.4921 ± 0.0022 | 0.3645 ± 0.0074 |
+| GMSC | w/o Gate | 0.3719 ± 0.0051 | 0.4947 ± 0.0017 | 0.3654 ± 0.0032 |
+| GMSC | w/o Latent | 0.3660 ± 0.0111 | 0.4779 ± 0.0051 | 0.3489 ± 0.0050 |
+| BANK | 完整模型 | 0.4290 ± 0.0311 | 0.5322 ± 0.0092 | 0.4522 ± 0.0101 |
+| BANK | w/o Reliability | 0.4245 ± 0.0326 | 0.5244 ± 0.0113 | 0.4427 ± 0.0103 |
+| BANK | w/o Deficit | 0.4366 ± 0.0264 | 0.5345 ± 0.0091 | 0.4475 ± 0.0111 |
+| BANK | w/o Gate | 0.4374 ± 0.0117 | 0.5306 ± 0.0032 | 0.4502 ± 0.0071 |
+| BANK | w/o Latent | 0.3925 ± 0.0288 | 0.4961 ± 0.0180 | 0.3579 ± 0.0191 |
+| DEFAULT | 完整模型 | 0.4408 ± 0.0164 | 0.6038 ± 0.0132 | 0.5251 ± 0.0057 |
+| DEFAULT | w/o Reliability | 0.4391 ± 0.0158 | 0.6086 ± 0.0086 | 0.5247 ± 0.0055 |
+| DEFAULT | w/o Deficit | 0.4527 ± 0.0100 | 0.6066 ± 0.0180 | 0.5250 ± 0.0059 |
+| DEFAULT | w/o Gate | 0.4430 ± 0.0121 | 0.6113 ± 0.0025 | 0.5235 ± 0.0050 |
 | DEFAULT | w/o Latent | 0.4261 ± 0.0054 | 0.6082 ± 0.0056 | 0.4789 ± 0.0009 |
 
 ![GMSC 五次消融](figures/gmsc_ablation_means.png)
@@ -146,7 +163,7 @@
 
 ## Welch 检验与多重比较
 
-固定配置 ADRN 与七类基线（含 SCL-TPE、CISNN 和 NDU 的近似或适配）、四种消融的五次测试 F1、F2、PR-AUC 分别采用双侧 Welch t 检验；横向对比形成 **63 项**、消融形成 **36 项**比较，分别进行 Benjamini–Hochberg 调整，全部原始 p 值和调整值见 `results/significance.json`。横向 63 项中 22 项、消融 36 项中 6 项调整后 p < 0.05；显著性本身不表明 ADRN 占优，方向需结合实际均值判断。
+固定配置 ADRN 与七类基线（含 SCL-TPE、CISNN 和 NDU 的近似或适配）、四种消融的五次测试 F1、F2、PR-AUC 分别采用双侧 Welch t 检验；横向对比形成 **63 项**、消融形成 **36 项**比较，分别进行 Benjamini–Hochberg 调整，全部原始 p 值和调整值见 `results/significance.json`。横向 63 项中 27 项、消融 36 项中 4 项调整后 p < 0.05；显著性本身不表明 ADRN 占优，方向需结合实际均值判断。
 
 **统计限制：**五次结果共享同一训练、验证和测试划分，且每组仅 5 次，Welch 检验不能反映跨划分波动，其独立性与正态性假设也较难充分验证；这些 p 值只作为固定划分下的探索结果，不应外推为稳健的统计结论。论文与本项目横向比较均含 7 项方法、63 项检验，但其中 3 项为独立近似或适配，具体训练配置也不同，因此与论文结果不等价。
 
@@ -154,7 +171,7 @@
 
 - 三组数据分别为 [Give Me Some Credit](https://www.kaggle.com/competitions/GiveMeSomeCredit/data)、[UCI Bank Marketing](https://archive.ics.uci.edu/dataset/222/bank+marketing) 和 [UCI Default of Credit Card Clients](https://archive.ics.uci.edu/dataset/350/default+of+credit+card+clients)。Bank 剔除 `duration`，Default 剔除 `ID`。本实现分别得到 10、50、33 个特征；Default 与论文表格的 29 维不同，原因包括编码方案未完全明确。
 - 划分随机种子 42；数值缺失用训练集中位数填补及标准化，类别缺失用训练集众数填补并独热编码。Default 的 SEX、EDUCATION、MARRIAGE 按类别编码。GMSC 实验使用 Kaggle 数据的公开副本；数据文件未提交至仓库。
-- 本次使用 CPU、Adam、学习率 0.001、批大小 512、隐层 64、潜在维数 16、每类 4 个基元、采样指数 β=0.5、预训练 3 轮、联合训练 6 轮、梯度裁剪 5。论文未完整给出搜索空间和每项训练配置，本实验使用明确固定的近似配置，并补充了 5 次候选的 TPE 搜索；这一小规模搜索不等同于论文未公开的完整搜索配置。
+- 本次使用 CPU、Adam、学习率 0.001、批大小 512、隐层 64、潜在维数 16、每类 4 个基元、采样指数 β=0.5、预训练 3 轮、联合训练 6 轮、梯度裁剪 5。论文未完整给出搜索空间和每项训练配置，本实验使用明确固定的近似配置，并补充了 12 次候选的 TPE 搜索；这一小规模搜索不等同于论文未公开的完整搜索配置。
 - 五次运行共享同一划分，标准差反映随机初始化和采样波动，不代表跨数据划分的泛化波动。另行实现四类常规横向基线、SCL-TPE 和 NDU 近似、CISNN 适配，以及 Bank 单次 K/不平衡率实验。
 - 四种消融已各完成五次；检验使用本项目固定配置与七项基线，其中 SCL-TPE、CISNN 与 NDU 为近似或适配实现。
 
@@ -170,11 +187,13 @@ python -m experiments.download_uci
 # 从 Kaggle 下载 GMSC 的 cs-training.csv 放入 data/raw/
 python -m unittest discover -s tests -v
 python -m experiments.run --seeds 0 1 2 3 4
-python -m experiments.tune --trials 5 --seeds 0 1 2 3 4
+python -m experiments.tune --trials 12 --seeds 0 1 2 3 4
 python -m experiments.baselines --seeds 0 1 2 3 4
 python -m experiments.scl_tpe --trials 5 --seeds 0 1 2 3 4
 python -m experiments.cisnn --epochs 60 --seeds 0 1 2 3 4
 python -m experiments.ndu_xgboost --seeds 0 1 2 3 4
+python -m experiments.encoding_study
+python -m experiments.plot_encoding
 python -m experiments.plot_ndu
 python -m experiments.sensitivity
 python -m experiments.ablation --seeds 0 1 2 3 4
@@ -183,6 +202,9 @@ python -m experiments.plot_extra
 python -m experiments.plot_ablation_means
 python -m experiments.mechanism
 python -m experiments.significance
+python -m experiments.package_checkpoints
+# Bank 输入为分号分隔的原始特征 CSV（无需 y 和 duration）
+python -m adrn.predict --dataset bank --input bank-input.csv --output predictions.csv
 ```
 
-运行产物写入 `results/`、`figures/` 和本地 `checkpoints/`。检查点目前只包含模型权重和参数，不包含预处理器，不应直接作为完整推理包使用。原始数据与检查点默认不上传。
+运行产物写入 `results/`、`figures/` 和本地 `checkpoints/`。`package_checkpoints` 根据本地原始数据和固定训练划分重新拟合预处理器，与种子 0 模型及验证集阈值配套使用；必须使用与训练时完全一致的数据、代码和依赖版本，维数一致本身不能保证数据相同。预处理器与模型检查点的 SHA-256 绑定；两者均保存在本地 `checkpoints/`，不随仓库上传。`joblib` 文件只能从可信来源加载。推理输入必须包含该数据集的原始特征列，输出为正类概率和基于验证集阈值的预测标签。原始数据默认不上传。

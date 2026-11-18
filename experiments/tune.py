@@ -5,7 +5,7 @@ import numpy as np
 import optuna
 from adrn.data import load
 from adrn.train import train
-p=argparse.ArgumentParser();p.add_argument('--datasets',nargs='+',default=['gmsc','bank','default']);p.add_argument('--trials',type=int,default=5);p.add_argument('--seeds',nargs='+',type=int,default=[0,1,2,3,4]);p.add_argument('--epochs',type=int,default=6);p.add_argument('--pretrain-epochs',type=int,default=3);args=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--datasets',nargs='+',default=['gmsc','bank','default']);p.add_argument('--trials',type=int,default=12);p.add_argument('--seeds',nargs='+',type=int,default=[0,1,2,3,4]);p.add_argument('--epochs',type=int,default=6);p.add_argument('--pretrain-epochs',type=int,default=3);args=p.parse_args()
 Path('results').mkdir(exist_ok=True)
 for name in args.datasets:
     tr,va,te,meta=load(name);print('TPE',name,flush=True)
