@@ -100,9 +100,7 @@
 
 ![NDU 分段删除率](figures/ndu_segment_rates.png)
 
-具体实验参数、每次结果与分段删除率见 `results/*_ndu_approx.json`；执行 `python -m experiments.ndu_xgboost` 后可重新生成结果，`python -m experiments.encoding_study
-python -m experiments.plot_encoding
-python -m experiments.plot_ndu` 重绘图形。
+具体实验参数、每次结果与分段删除率见 `results/*_ndu_approx.json`；执行 `python -m experiments.ndu_xgboost` 后可重新生成结果，`python -m experiments.plot_ndu` 重绘图形。
 
 本次 XGBoost 在三组数据的 F1、F2、PR-AUC 上均高于本次固定配置的 ADRN；因此本次结果不支持 ADRN 在这些条件下全面优于该基线。图中同时保留固定配置和 TPE 配置，TPE 配置并未根据测试集结果选择。
 
@@ -179,7 +177,7 @@ python -m experiments.plot_ndu` 重绘图形。
 
 ```bash
 python -m venv .venv
-# Windows: .venv\\Scripts\\activate
+# Windows: .venv\Scripts\activate
 # Linux/macOS:
 source .venv/bin/activate
 pip install -r requirements.txt
